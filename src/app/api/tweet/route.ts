@@ -1,53 +1,54 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import redis from '../lib/redis';
+import redis from '@/app/api/lib/redis';
 
 // v1.1 simple upload for example
 const UPLOAD_ENDPOINT = 'https://upload.twitter.com/1.1/media/upload.json';
 const TWEET_ENDPOINT = 'https://api.twitter.com/1.1/statuses/update.json';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method !== 'POST') return res.status(405).end();
-
-    const { imageBase64, tweetText } = req.body || {};
+// POST メソッドに対応する関数をエクスポート
+export async function POST(request: Request) {
+    // リクエストボディを取得
+    const { imageBase64, tweetText } = await request.json();
     if (!imageBase64) {
-        return res.status(400).json({ error: 'No imageBase64 provided' });
+        return new Response(JSON.stringify({ error: 'No imageBase64 provided' }), { status: 400 });
     }
 
-    // 1. session_id取得
-    const sessionId = parseSessionId(req.headers.cookie || '');
+    // ヘッダーからクッキーを取得し、session_id をパース
+    const cookieHeader = request.headers.get('cookie') || '';
+    const sessionId = parseSessionId(cookieHeader);
     if (!sessionId) {
-        return res.status(401).json({ error: 'No session_id found in cookie' });
+        return new Response(JSON.stringify({ error: 'No session_id found in cookie' }), { status: 401 });
     }
 
-    // 2. Redisからアクセストークン取得
+    // Redis からアクセストークンを取得
     const userAccessToken = await redis.get(`x_token:${sessionId}`);
     if (!userAccessToken) {
-        return res.status(401).json({ error: 'User not authenticated or token expired' });
+        return new Response(JSON.stringify({ error: 'User not authenticated or token expired' }), { status: 401 });
     }
 
     try {
-        // 3. Simple upload
+        // 1. 画像をアップロード
         const base64Str = imageBase64.replace(/^data:image\/\w+;base64,/, '');
         const uploadParams = new URLSearchParams({ media_data: base64Str });
 
         const uploadResp = await fetch(UPLOAD_ENDPOINT, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${userAccessToken}`, // v2 token ではたぶんNG -> 1.1 APIはOAuth1.0aが多い
+                Authorization: `Bearer ${userAccessToken}`,
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: uploadParams.toString(),
         });
+
         const uploadData = await uploadResp.json();
         if (uploadData.errors) {
-            return res.status(400).json(uploadData.errors);
+            return new Response(JSON.stringify(uploadData.errors), { status: 400 });
         }
         const mediaId = uploadData.media_id_string;
         if (!mediaId) {
-            return res.status(400).json({ error: 'No media_id returned' });
+            return new Response(JSON.stringify({ error: 'No media_id returned' }), { status: 400 });
         }
 
-        // 4. ツイート
+        // 2. ツイートを投稿
         const tweetParams = new URLSearchParams({
             status: tweetText || 'My novel promotion!',
             media_ids: mediaId,
@@ -60,19 +61,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 'Content-Type': 'application/json',
             },
         });
+
         const tweetData = await tweetResp.json();
         if (tweetData.errors) {
-            return res.status(400).json(tweetData.errors);
+            return new Response(JSON.stringify(tweetData.errors), { status: 400 });
         }
 
-        // success
-        return res.status(200).json({ success: true, tweet: tweetData });
+        // 成功レスポンスを返す
+        return new Response(JSON.stringify({ success: true, tweet: tweetData }), { status: 200 });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Tweet posting failed', details: String(error) });
+        return new Response(
+            JSON.stringify({ error: 'Tweet posting failed', details: String(error) }),
+            { status: 500 }
+        );
     }
 }
 
+// ヘルパー関数
 function parseSessionId(cookieHeader: string) {
     const match = cookieHeader.match(/session_id=([^;]+)/);
     return match ? match[1] : null;
