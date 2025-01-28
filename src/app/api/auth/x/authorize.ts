@@ -1,8 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
-import redis from '../../lib/redis';
+import { Redis } from '@upstash/redis';
 
 const X_AUTH_URL = 'https://twitter.com/i/oauth2/authorize';
+
+// Initialize Redis
+const redis = Redis.fromEnv();
 
 // ランダムな sessionId を作り、Cookieに入れる。
 // PKCEの code_verifier, state は Redis に保存 (TTL付き)
@@ -28,8 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await redis.set(
         `pkce:${sessionId}`,
         JSON.stringify({ code_verifier, state }),
-        'EX',
-        300
+        { ex: 300 }
     );
 
     // 4. Cookieに sessionId をセット (httpOnly, secure)

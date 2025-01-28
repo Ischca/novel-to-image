@@ -1,8 +1,11 @@
 // pages/api/auth/x/callback.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import redis from '../../lib/redis';
+import { Redis } from '@upstash/redis';
 
 const TOKEN_URL = 'https://api.twitter.com/2/oauth2/token';
+
+// Initialize Redis
+const redis = Redis.fromEnv();
 
 // 仮にアクセストークンをRedisに保存する (本番はユーザー毎のIDなど)
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 1. Redisから pkce:${sessionId} を取得
-    const pkceData = await redis.get(`pkce:${sessionId}`);
+    const pkceData: string | null = await redis.get(`pkce:${sessionId}`);
     if (!pkceData) {
         return res.status(400).send('PKCE data not found or expired');
     }
@@ -48,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const accessToken = data.access_token;
         // 例: Redisに保存 (60分有効など)
-        await redis.set(`x_token:${sessionId}`, accessToken, 'EX', 3600);
+        await redis.set(`x_token:${sessionId}`, accessToken, { ex: 3600 });
 
         // PKCE用データを削除
         await redis.del(`pkce:${sessionId}`);
