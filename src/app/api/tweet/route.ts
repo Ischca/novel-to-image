@@ -1,8 +1,11 @@
-import redis from '@/app/api/lib/redis';
+import { Redis } from '@upstash/redis';
 
 // v1.1 simple upload for example
 const UPLOAD_ENDPOINT = 'https://upload.twitter.com/1.1/media/upload.json';
 const TWEET_ENDPOINT = 'https://api.twitter.com/1.1/statuses/update.json';
+
+// Initialize Redis
+const redis = Redis.fromEnv();
 
 // POST メソッドに対応する関数をエクスポート
 export async function POST(request: Request) {

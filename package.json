@@ -10,6 +10,7 @@
     "lint:fix": "next lint --fix"
   },
   "dependencies": {
+    "@upstash/redis": "^1.34.3",
     "@vercel/analytics": "^1.4.1",
     "crypto": "^1.0.1",
     "html2canvas": "^1.4.1",
