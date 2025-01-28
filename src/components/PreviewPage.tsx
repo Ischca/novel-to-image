@@ -32,9 +32,7 @@ function PreviewPage({
     width,
     height,
     title,
-    scale = 1,
     containerStyle,
-    pageStyle,
     paddingY = 0,
     paddingX = 0,
 }: PreviewPageProps) {

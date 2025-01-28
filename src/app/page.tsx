@@ -24,16 +24,6 @@ function splitPagesByDelimiter(text: string) {
   return pages;
 }
 
-/** 縦書きの場合のみクォート記号を変換 */
-function transformQuotesForVertical(text: string) {
-  return text
-    .replace(/“/g, "〝")
-    .replace(/”/g, "〟")
-    .replace(/"(.*?)"/gs, (_, p1) => {
-      return `〝${p1}〟`;
-    });
-}
-
 export default function Home() {
   /**
    * メイン画面：タイトル等のフォーム。小プレビューは省略気味でOK
@@ -53,7 +43,7 @@ export default function Home() {
   const [imageWidth, setImageWidth] = useState(600);
   const [imageHeight, setImageHeight] = useState(600);
 
-  const [tweetText, setTweetText] = useState("小説宣伝です！");
+  // const [tweetText, setTweetText] = useState("小説宣伝です！");
   const [status, setStatus] = useState("");
 
   // ダイアログ表示
@@ -74,23 +64,6 @@ export default function Home() {
 
   /** モーダルを開く */
   const openModal = () => {
-    // 例: marginを上下左右に 100px 確保する
-    const margin = 100;
-    const vw = window.innerWidth - margin;
-    const vh = window.innerHeight - margin;
-
-    // 4:3 => width / height = 4/3 => height = width * (3/4)
-    // width は vh*(4/3) で求められるが、実際には画面幅 vw にも制限
-    // -> 先にwidthを min( vw, vh * (4 / 3) )
-    let tmpWidth = Math.min(vw, vh * (4 / 3));
-    // そして height = tmpWidth * (3 / 4)
-    let tmpHeight = tmpWidth * (3 / 4);
-
-    // 小さすぎにならないよう下限
-    if (tmpWidth < 400) {
-      tmpWidth = 400;
-      tmpHeight = 300;
-    }
     setCurrentPageIdx(0);
     setIsModalOpen(true);
   };
@@ -98,14 +71,6 @@ export default function Home() {
   const closeModal = () => {
     setIsModalOpen(false);
     setStatus("");
-  };
-
-  /** スライド切り替え */
-  const handlePrevPage = () => {
-    setCurrentPageIdx((idx) => Math.max(0, idx - 1));
-  };
-  const handleNextPage = () => {
-    setCurrentPageIdx((idx) => Math.min(storyPages.length - 1, idx + 1));
   };
 
   /** ダイアログで投稿(キャプチャ) */
@@ -123,7 +88,7 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         imageBase64: dataURL,
-        tweetText,
+        // tweetText,
       }),
     });
     if (!resp.ok) {
@@ -173,7 +138,7 @@ export default function Home() {
                 name="orientation"
                 value="horizontal"
                 checked={orientation === "horizontal"}
-                onChange={(e) => {
+                onChange={(_) => {
                   if (orientation !== "horizontal") {
                     setOrientation("horizontal");
                     // パディング入れ替えのロジックを削除
@@ -188,7 +153,7 @@ export default function Home() {
                 name="orientation"
                 value="vertical"
                 checked={orientation === "vertical"}
-                onChange={(e) => {
+                onChange={(_) => {
                   if (orientation !== "vertical") {
                     setOrientation("vertical");
                     // パディング入れ替えのロジックを削除
