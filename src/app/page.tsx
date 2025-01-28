@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import html2canvas from "html2canvas";
 import PreviewPage from '@/components/PreviewPage';
 
@@ -62,6 +62,20 @@ export default function Home() {
   const [paddingY, setPaddingY] = useState(12);
   const [paddingX, setPaddingX] = useState(12);
 
+  // 認証状態を管理するステート
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // サーバーに認証状態を問い合わせるエンドポイントを作成し、認証状態を取得
+    fetch('/api/auth/check', {
+      credentials: 'include',
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setIsAuthenticated(data.isAuthenticated);
+      });
+  }, []);
+
   /** モーダルを開く */
   const openModal = () => {
     setCurrentPageIdx(0);
@@ -89,9 +103,13 @@ export default function Home() {
       credentials: "include",
       body: JSON.stringify({
         imageBase64: dataURL,
-        // tweetText,
       }),
     });
+    if (resp.status === 401) {
+      alert("ログインが必要です。ログインページにリダイレクトします。");
+      window.location.href = '/api/auth/x/authorize';
+      return;
+    }
     if (!resp.ok) {
       const err = await resp.json();
       setStatus(`投稿失敗: ${JSON.stringify(err)}`);
@@ -103,6 +121,10 @@ export default function Home() {
     } else {
       setStatus(`投稿エラー: ${JSON.stringify(json)}`);
     }
+  };
+
+  const handleLogin = () => {
+    window.location.href = '/api/auth/x/authorize';
   };
 
   return (
@@ -403,12 +425,21 @@ export default function Home() {
               >
                 キャンセル
               </button>
-              <button
-                className="bg-green-600 text-white px-4 py-2 rounded"
-                onClick={handleFinalSubmit}
-              >
-                投稿
-              </button>
+              {!isAuthenticated ? (
+                <button
+                  className="bg-green-600 text-white px-4 py-2 rounded"
+                  onClick={handleLogin}
+                >
+                  ログイン
+                </button>
+              ) : (
+                <button
+                  className="bg-green-600 text-white px-4 py-2 rounded"
+                  onClick={handleFinalSubmit}
+                >
+                  投稿
+                </button>
+              )}
             </div>
             {status && <p className="text-red-500 text-center mb-2">{status}</p>}
           </div>
