@@ -86,6 +86,7 @@ export default function Home() {
     const resp = await fetch("/api/tweet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         imageBase64: dataURL,
         // tweetText,

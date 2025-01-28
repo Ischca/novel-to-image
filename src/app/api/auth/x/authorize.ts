@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const params = new URLSearchParams({
         response_type: 'code',
         client_id: process.env.X_CLIENT_ID || '',
-        redirect_uri: `${process.env.API_URL}/api/auth/x/callback`, // デプロイ後は本番URLに
+        redirect_uri: `${process.env.API_URL}/api/auth/x/callback`,
         scope: 'tweet.read tweet.write users.read offline.access',
         state: state,
         code_challenge: code_challenge,

@@ -33,6 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const body = new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: process.env.X_CLIENT_ID || '',
+        client_secret: process.env.X_CLIENT_SECRET || '',
         code: code as string,
         redirect_uri: `${process.env.API_URL}/api/auth/x/callback`,
         code_verifier,
