@@ -40,11 +40,13 @@ export async function GET(request: NextRequest) {
     return new NextResponse('State mismatch', { status: 400 });
   }
 
-  // 2. アクセストークン取得
+  // 2. クライアント認証情報をBase64エンコード
+  const credentials = `${process.env.X_CLIENT_ID}:${process.env.X_CLIENT_SECRET}`;
+  const encodedCredentials = Buffer.from(credentials).toString('base64');
+
+  // 3. アクセストークン取得
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
-    client_id: process.env.X_CLIENT_ID || '',
-    client_secret: process.env.X_CLIENT_SECRET || '',
     code: code as string,
     redirect_uri: `${process.env.API_URL}/api/auth/x/callback`,
     code_verifier,
@@ -53,7 +55,10 @@ export async function GET(request: NextRequest) {
   try {
     const resp = await fetch(TOKEN_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${encodedCredentials}`,
+      },
       body: body.toString(),
     });
     const data = await resp.json();
@@ -68,7 +73,7 @@ export async function GET(request: NextRequest) {
     // PKCE用データを削除
     await redis.del(`pkce:${sessionId}`);
 
-    // 3. リダイレクト
+    // 4. リダイレクト
     return NextResponse.redirect('/?login=success');
   } catch (error) {
     console.error(error);
