@@ -65,6 +65,9 @@ export default function Home() {
   // 認証状態を管理するステート
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // ユーザーが入力するツイートテキスト
+  const [tweetText, setTweetText] = useState("シェアするテキストをここに入力");
+
   useEffect(() => {
     // サーバーに認証状態を問い合わせるエンドポイントを作成し、認証状態を取得
     fetch('/api/auth/check', {
@@ -96,31 +99,26 @@ export default function Home() {
     const dataURL = canvas.toDataURL("image/png");
 
     setStatus("サーバー送信中...");
-    // 実際には /api/tweetなど
+    // サーバーにツイートリクエストを送信
     const resp = await fetch("/api/tweet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
         imageBase64: dataURL,
+        tweetText: tweetText,
       }),
     });
-    if (resp.status === 401) {
-      alert("ログインが必要です。ログインページにリダイレクトします。");
-      window.location.href = '/api/auth/x/authorize';
-      return;
-    }
+
+    const result = await resp.json();
+
     if (!resp.ok) {
-      const err = await resp.json();
-      setStatus(`投稿失敗: ${JSON.stringify(err)}`);
+      setStatus(`投稿失敗: ${JSON.stringify(result)}`);
       return;
     }
-    const json = await resp.json();
-    if (json.success) {
-      setStatus("投稿成功！");
-    } else {
-      setStatus(`投稿エラー: ${JSON.stringify(json)}`);
-    }
+
+    setStatus("投稿成功！");
+    // 必要に応じて投稿結果を処理
   };
 
   const handleLogin = () => {
@@ -297,6 +295,15 @@ export default function Home() {
               />
             </div>
           )}
+
+          {/* ツイートテキスト入力欄を追加 */}
+          <label className="block mt-4 font-bold">ツイート内容</label>
+          <textarea
+            className="w-full p-2 border rounded"
+            rows={3}
+            value={tweetText}
+            onChange={(e) => setTweetText(e.target.value)}
+          />
 
           {/* ボタン */}
           <button
