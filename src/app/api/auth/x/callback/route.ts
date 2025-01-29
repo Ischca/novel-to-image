@@ -73,8 +73,11 @@ export async function GET(request: NextRequest) {
     // PKCE用データを削除
     await redis.del(`pkce:${sessionId}`);
 
+    // 認証成功後のリダイレクト
+    const redirectUrl = `${request.nextUrl.origin}/?login=success`;
+
     // 4. リダイレクト
-    return NextResponse.redirect('/?login=success');
+    return NextResponse.redirect(redirectUrl);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to get token' }, { status: 500 });
