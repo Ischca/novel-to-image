@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 
 // v1.1 simple upload for example
@@ -7,77 +8,48 @@ const TWEET_ENDPOINT = 'https://api.twitter.com/1.1/statuses/update.json';
 // Initialize Redis
 const redis = Redis.fromEnv();
 
+const API_URL = 'https://api.x.com/2/tweets';
+
 // POST メソッドに対応する関数をエクスポート
-export async function POST(request: Request) {
-    // リクエストボディを取得
-    const { imageBase64, tweetText } = await request.json();
-    if (!imageBase64) {
-        return new Response(JSON.stringify({ error: 'No imageBase64 provided' }), { status: 400 });
-    }
+export async function POST(request: NextRequest) {
+    const sessionId = request.cookies.get('session_id')?.value;
 
-    // ヘッダーからクッキーを取得し、session_id をパース
-    const cookieHeader = request.headers.get('cookie') || '';
-    const sessionId = parseSessionId(cookieHeader);
     if (!sessionId) {
-        return new Response(JSON.stringify({ error: 'No session_id found in cookie' }), { status: 401 });
+        return NextResponse.json({ error: 'No session_id found in cookie' }, { status: 401 });
     }
 
-    // Redis からアクセストークンを取得
-    const userAccessToken = await redis.get(`x_token:${sessionId}`);
-    if (!userAccessToken) {
-        return new Response(JSON.stringify({ error: 'User not authenticated or token expired' }), { status: 401 });
+    const accessToken = await redis.get(`x_token:${sessionId}`);
+
+    if (!accessToken) {
+        return NextResponse.json({ error: 'No access token found' }, { status: 401 });
     }
+
+    const body = await request.json();
+    const tweetText = body.tweetText || '';
 
     try {
-        // 1. 画像をアップロード
-        const base64Str = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-        const uploadParams = new URLSearchParams({ media_data: base64Str });
-
-        const uploadResp = await fetch(UPLOAD_ENDPOINT, {
+        const resp = await fetch(API_URL, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${userAccessToken}`,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: uploadParams.toString(),
-        });
-
-        const uploadData = await uploadResp.json();
-        if (uploadData.errors) {
-            return new Response(JSON.stringify(uploadData.errors), { status: 400 });
-        }
-        const mediaId = uploadData.media_id_string;
-        if (!mediaId) {
-            return new Response(JSON.stringify({ error: 'No media_id returned' }), { status: 400 });
-        }
-
-        // 2. ツイートを投稿
-        const tweetParams = new URLSearchParams({
-            status: tweetText || 'My novel promotion!',
-            media_ids: mediaId,
-        });
-
-        const tweetResp = await fetch(`${TWEET_ENDPOINT}?${tweetParams.toString()}`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${userAccessToken}`,
+                'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+                text: tweetText,
+            }),
         });
 
-        const tweetData = await tweetResp.json();
-        if (tweetData.errors) {
-            return new Response(JSON.stringify(tweetData.errors), { status: 400 });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+            return NextResponse.json({ error: 'Tweet posting failed', details: data }, { status: 500 });
         }
 
-        // 成功レスポンスを返す
-        return new Response(JSON.stringify({ success: true, tweet: tweetData }), { status: 200 });
+        return NextResponse.json({ success: true, data });
     } catch (error) {
         console.error(error);
-        return new Response(
-            JSON.stringify({ error: 'Tweet posting failed', details: String(error) }),
-            { status: 500 }
-        );
+        const message = error instanceof Error ? error.message : String(error);
+        return NextResponse.json({ error: 'Tweet posting failed', details: message }, { status: 500 });
     }
 }
 
