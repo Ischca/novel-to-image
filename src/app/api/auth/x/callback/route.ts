@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
-  const cookieHeader = request.headers.get('cookie') || '';
-  const sessionId = parseSessionId(cookieHeader);
+
+  const sessionId = request.cookies.get('session_id')?.value;
 
   if (!sessionId) {
     return new NextResponse('No session_id cookie found', { status: 400 });

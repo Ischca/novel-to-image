@@ -34,17 +34,7 @@ export async function GET(request: NextRequest) {
     { ex: 300 }
   );
 
-  // 4. Cookieに sessionId をセット (httpOnly, secure)
-  const response = NextResponse.redirect(new URL('/api/auth/x/callback', request.url));
-  response.cookies.set('session_id', sessionId, {
-    httpOnly: true,
-    path: '/',
-    maxAge: 300,
-    sameSite: 'lax',
-    secure: true,
-  });
-
-  // 5. XのOAuth画面にリダイレクト
+  // 4. XのOAuth画面にリダイレクトするURLを作成
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: process.env.X_CLIENT_ID || '',
@@ -56,5 +46,15 @@ export async function GET(request: NextRequest) {
   });
   const redirectUrl = `${X_AUTH_URL}?${params.toString()}`;
 
-  return NextResponse.redirect(redirectUrl);
+  // 5. クッキーを設定したレスポンスを作成
+  const response = NextResponse.redirect(redirectUrl);
+  response.cookies.set('session_id', sessionId, {
+    httpOnly: true,
+    path: '/',
+    maxAge: 300,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production', // 本番環境ではtrue、開発環境ではfalse
+  });
+
+  return response;
 } 
