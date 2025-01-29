@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
   }
 
   // 1. Redisから pkce:${sessionId} を取得
-  const pkceData: string | null = await redis.get(`pkce:${sessionId}`);
+  const pkceData = await redis.get(`pkce:${sessionId}`) as { code_verifier: string; state: string } | null;
+
   if (!pkceData) {
     return new NextResponse('PKCE data not found or expired', { status: 400 });
   }
@@ -32,18 +33,7 @@ export async function GET(request: NextRequest) {
   // **デバッグ用ログ**
   console.log('Retrieved pkceData from Redis:', pkceData);
 
-  let code_verifier: string;
-  let storedState: string;
-
-  try {
-    // 取得したデータをパース
-    const parsedData = JSON.parse(pkceData);
-    code_verifier = parsedData.code_verifier;
-    storedState = parsedData.state;
-  } catch (error) {
-    console.error('Failed to parse pkceData:', error);
-    return new NextResponse('Invalid pkceData format', { status: 500 });
-  }
+  const { code_verifier, state: storedState } = pkceData;
 
   // stateチェック
   if (state !== storedState) {
