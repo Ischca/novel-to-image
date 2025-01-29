@@ -29,7 +29,21 @@ export async function GET(request: NextRequest) {
     return new NextResponse('PKCE data not found or expired', { status: 400 });
   }
 
-  const { code_verifier, state: storedState } = JSON.parse(pkceData);
+  // **デバッグ用ログ**
+  console.log('Retrieved pkceData from Redis:', pkceData);
+
+  let code_verifier: string;
+  let storedState: string;
+
+  try {
+    // 取得したデータをパース
+    const parsedData = JSON.parse(pkceData);
+    code_verifier = parsedData.code_verifier;
+    storedState = parsedData.state;
+  } catch (error) {
+    console.error('Failed to parse pkceData:', error);
+    return new NextResponse('Invalid pkceData format', { status: 500 });
+  }
 
   // stateチェック
   if (state !== storedState) {
