@@ -38,14 +38,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. ツイートを投稿
-    const tweetParams: any = {
-      text: tweetText,
+    const tweetParams = {
+        text: tweetText,
+        media: mediaId ? { media_ids: [mediaId] } : undefined,
     };
-    if (mediaId) {
-      tweetParams.media = {
-        media_ids: [mediaId],
-      };
-    }
 
     const resp = await fetch(TWEET_ENDPOINT, {
       method: 'POST',

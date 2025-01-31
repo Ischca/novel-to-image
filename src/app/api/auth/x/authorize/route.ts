@@ -13,7 +13,7 @@ function generateRandomString(length: number): string {
   return crypto.randomBytes(length).toString('hex');
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   // 1. sessionId を発行
   const sessionId = generateRandomString(16);
 

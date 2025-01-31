@@ -6,12 +6,6 @@ const TOKEN_URL = 'https://api.twitter.com/2/oauth2/token';
 // Initialize Redis
 const redis = Redis.fromEnv();
 
-// Cookieから session_id を取り出す関数
-function parseSessionId(cookieHeader: string) {
-  const match = cookieHeader.match(/session_id=([^;]+)/);
-  return match ? match[1] : null;
-}
-
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
